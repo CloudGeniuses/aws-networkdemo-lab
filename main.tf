@@ -58,10 +58,25 @@ variable "vpc_cidr" {
   }
 }
 
-variable "public_a_cidr"  { type = string  default = "10.10.1.0/24" }
-variable "private_a_cidr" { type = string  default = "10.10.2.0/24" }
-variable "public_b_cidr"  { type = string  default = "10.10.3.0/24" }
-variable "private_b_cidr" { type = string  default = "10.10.4.0/24" }
+variable "public_a_cidr" {
+  type    = string
+  default = "10.10.1.0/24"
+}
+
+variable "private_a_cidr" {
+  type    = string
+  default = "10.10.2.0/24"
+}
+
+variable "public_b_cidr" {
+  type    = string
+  default = "10.10.3.0/24"
+}
+
+variable "private_b_cidr" {
+  type    = string
+  default = "10.10.4.0/24"
+}
 
 # Optional: Bastion instance type (no key required for SSM)
 variable "bastion_instance_type" {
@@ -229,7 +244,7 @@ resource "aws_default_security_group" "default" {
 ############################################
 resource "aws_security_group" "sg_bastion" {
   name        = "${var.project_prefix}-sg-bastion"
-  description = "SSM bastion - no inbound; egress only"     # ASCII only
+  description = "SSM bastion - no inbound; egress only"
   vpc_id      = aws_vpc.this.id
 
   egress {
@@ -246,7 +261,7 @@ resource "aws_security_group" "sg_bastion" {
 
 resource "aws_security_group" "sg_mgmt" {
   name        = "${var.project_prefix}-sg-mgmt"
-  description = "Palo Alto management - only from bastion"  # ASCII only
+  description = "Palo Alto management - only from bastion"
   vpc_id      = aws_vpc.this.id
 
   # HTTPS from bastion SG
@@ -282,7 +297,7 @@ resource "aws_security_group" "sg_mgmt" {
 
 resource "aws_security_group" "sg_endpoints" {
   name        = "${var.project_prefix}-sg-endpoints"
-  description = "Interface endpoint ENIs - allow HTTPS from VPC"  # ASCII only
+  description = "Interface endpoint ENIs - allow HTTPS from VPC"
   vpc_id      = aws_vpc.this.id
 
   ingress {
