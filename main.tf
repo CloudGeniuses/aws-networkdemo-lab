@@ -12,7 +12,7 @@ terraform {
   cloud {
     organization = "YOUR_TFC_ORG"
     workspaces {
-      name = "cg-adv-network-usw1"
+      name = "cg-adv-network-usw2"   # updated from usw1
     }
   }
 
@@ -28,7 +28,7 @@ terraform {
 # Provider + Default Tags
 ############################################
 provider "aws" {
-  region = "us-west-1"
+  region = "us-west-2"               # updated from us-west-1
 
   default_tags {
     tags = {
@@ -87,7 +87,7 @@ variable "bastion_instance_type" {
 # Region variable used to build VPC endpoint service names
 variable "region" {
   type    = string
-  default = "us-west-1"
+  default = "us-west-2"              # updated from us-west-1
 }
 
 ############################################
