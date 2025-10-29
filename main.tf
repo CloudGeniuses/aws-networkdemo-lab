@@ -1,5 +1,5 @@
 ############################################
-# cg-adv — Phase 1 Base Network (Prod-hardened)
+# cg-adv - Phase 1 Base Network (Prod-hardened)
 #  - Private mgmt (no public inbound)
 #  - SSM bastion with VPC endpoints
 #  - VPC Flow Logs, default SG lockdown
@@ -58,25 +58,10 @@ variable "vpc_cidr" {
   }
 }
 
-variable "public_a_cidr" {
-  type    = string
-  default = "10.10.1.0/24"
-}
-
-variable "private_a_cidr" {
-  type    = string
-  default = "10.10.2.0/24"
-}
-
-variable "public_b_cidr" {
-  type    = string
-  default = "10.10.3.0/24"
-}
-
-variable "private_b_cidr" {
-  type    = string
-  default = "10.10.4.0/24"
-}
+variable "public_a_cidr"  { type = string  default = "10.10.1.0/24" }
+variable "private_a_cidr" { type = string  default = "10.10.2.0/24" }
+variable "public_b_cidr"  { type = string  default = "10.10.3.0/24" }
+variable "private_b_cidr" { type = string  default = "10.10.4.0/24" }
 
 # Optional: Bastion instance type (no key required for SSM)
 variable "bastion_instance_type" {
@@ -197,7 +182,7 @@ resource "aws_route_table_association" "assoc_public_b" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private RTs (default empty; later we’ll add GWLB routes)
+# Private RTs (default empty; later we'll add GWLB routes)
 resource "aws_route_table" "private_a" {
   vpc_id = aws_vpc.this.id
 
@@ -230,9 +215,7 @@ resource "aws_route_table_association" "assoc_private_b" {
 resource "aws_default_security_group" "default" {
   vpc_id                 = aws_vpc.this.id
   revoke_rules_on_delete = true
-
-  # (no ingress/egress rules defined here → implicit deny)
-
+  # No ingress/egress blocks -> removes default allow rules
   tags = {
     Name = "${var.project_prefix}-default-sg-locked"
   }
@@ -240,13 +223,13 @@ resource "aws_default_security_group" "default" {
 
 ############################################
 # Security Groups
-# - sg_mgmt: Palo mgmt (private) — only from bastion SG
+# - sg_mgmt: Palo mgmt (private) - only from bastion SG
 # - sg_bastion: SSM-managed; no inbound rules required
 # - sg_endpoints: for Interface Endpoints (allow 443 from VPC)
 ############################################
 resource "aws_security_group" "sg_bastion" {
   name        = "${var.project_prefix}-sg-bastion"
-  description = "SSM bastion — no inbound; egress only"
+  description = "SSM bastion - no inbound; egress only"     # ASCII only
   vpc_id      = aws_vpc.this.id
 
   egress {
@@ -263,7 +246,7 @@ resource "aws_security_group" "sg_bastion" {
 
 resource "aws_security_group" "sg_mgmt" {
   name        = "${var.project_prefix}-sg-mgmt"
-  description = "Palo Alto management — only from bastion"
+  description = "Palo Alto management - only from bastion"  # ASCII only
   vpc_id      = aws_vpc.this.id
 
   # HTTPS from bastion SG
@@ -299,7 +282,7 @@ resource "aws_security_group" "sg_mgmt" {
 
 resource "aws_security_group" "sg_endpoints" {
   name        = "${var.project_prefix}-sg-endpoints"
-  description = "Interface endpoint ENIs — allow HTTPS from VPC"
+  description = "Interface endpoint ENIs - allow HTTPS from VPC"  # ASCII only
   vpc_id      = aws_vpc.this.id
 
   ingress {
@@ -417,7 +400,7 @@ resource "aws_instance" "bastion" {
 }
 
 ############################################
-# VPC Flow Logs → CloudWatch  (fixed: use log_destination)
+# VPC Flow Logs -> CloudWatch
 ############################################
 resource "aws_cloudwatch_log_group" "vpc_flow" {
   name              = "/vpc/${var.project_prefix}/flow-logs"
@@ -506,7 +489,5 @@ output "bastion_instance_id" {
 }
 
 output "vpce_ids" {
-  value = {
-    for k, v in aws_vpc_endpoint.ssm_endpoints : k => v.id
-  }
+  value = { for k, v in aws_vpc_endpoint.ssm_endpoints : k => v.id }
 }
