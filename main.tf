@@ -11,11 +11,16 @@ terraform {
 
   cloud {
     organization = "YOUR_TFC_ORG"
-    workspaces { name = "cg-adv-network-usw1" }
+    workspaces {
+      name = "cg-adv-network-usw1"
+    }
   }
 
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 5.0" }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -24,6 +29,7 @@ terraform {
 ############################################
 provider "aws" {
   region = "us-west-1"
+
   default_tags {
     tags = {
       Project     = "Advantus360"
@@ -37,22 +43,59 @@ provider "aws" {
 ############################################
 # Inputs
 ############################################
-variable "project_prefix" { type = string, default = "cg-adv" }
-variable "vpc_cidr"       { type = string, default = "10.10.0.0/16"
-  validation { condition = can(cidrnetmask(var.vpc_cidr)); error_message = "vpc_cidr must be a valid CIDR." }
+variable "project_prefix" {
+  type    = string
+  default = "cg-adv"
 }
-variable "public_a_cidr"  { type = string, default = "10.10.1.0/24" }
-variable "private_a_cidr" { type = string, default = "10.10.2.0/24" }
-variable "public_b_cidr"  { type = string, default = "10.10.3.0/24" }
-variable "private_b_cidr" { type = string, default = "10.10.4.0/24" }
 
-# Optional: Bastion instance type & key (key not required for SSM)
-variable "bastion_instance_type" { type = string, default = "t3.micro" }
+variable "vpc_cidr" {
+  type    = string
+  default = "10.10.0.0/16"
+
+  validation {
+    condition     = can(cidrnetmask(var.vpc_cidr))
+    error_message = "vpc_cidr must be a valid CIDR."
+  }
+}
+
+variable "public_a_cidr" {
+  type    = string
+  default = "10.10.1.0/24"
+}
+
+variable "private_a_cidr" {
+  type    = string
+  default = "10.10.2.0/24"
+}
+
+variable "public_b_cidr" {
+  type    = string
+  default = "10.10.3.0/24"
+}
+
+variable "private_b_cidr" {
+  type    = string
+  default = "10.10.4.0/24"
+}
+
+# Optional: Bastion instance type (no key required for SSM)
+variable "bastion_instance_type" {
+  type    = string
+  default = "t3.micro"
+}
+
+# Region variable used to build VPC endpoint service names
+variable "region" {
+  type    = string
+  default = "us-west-1"
+}
 
 ############################################
 # AZ Discovery
 ############################################
-data "aws_availability_zones" "available" { state = "available" }
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 ############################################
 # VPC
@@ -61,7 +104,10 @@ resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags = { Name = "${var.project_prefix}-vpc" }
+
+  tags = {
+    Name = "${var.project_prefix}-vpc"
+  }
 }
 
 ############################################
@@ -69,7 +115,10 @@ resource "aws_vpc" "this" {
 ############################################
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.project_prefix}-igw" }
+
+  tags = {
+    Name = "${var.project_prefix}-igw"
+  }
 }
 
 ############################################
@@ -80,14 +129,22 @@ resource "aws_subnet" "public_a" {
   cidr_block              = var.public_a_cidr
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-  tags = { Name = "${var.project_prefix}-subnet-public-a", Tier = "public" }
+
+  tags = {
+    Name = "${var.project_prefix}-subnet-public-a"
+    Tier = "public"
+  }
 }
 
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_a_cidr
   availability_zone = data.aws_availability_zones.available.names[0]
-  tags = { Name = "${var.project_prefix}-subnet-private-a", Tier = "private" }
+
+  tags = {
+    Name = "${var.project_prefix}-subnet-private-a"
+    Tier = "private"
+  }
 }
 
 resource "aws_subnet" "public_b" {
@@ -95,14 +152,22 @@ resource "aws_subnet" "public_b" {
   cidr_block              = var.public_b_cidr
   availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = true
-  tags = { Name = "${var.project_prefix}-subnet-public-b", Tier = "public" }
+
+  tags = {
+    Name = "${var.project_prefix}-subnet-public-b"
+    Tier = "public"
+  }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_b_cidr
   availability_zone = data.aws_availability_zones.available.names[1]
-  tags = { Name = "${var.project_prefix}-subnet-private-b", Tier = "private" }
+
+  tags = {
+    Name = "${var.project_prefix}-subnet-private-b"
+    Tier = "private"
+  }
 }
 
 ############################################
@@ -110,7 +175,10 @@ resource "aws_subnet" "private_b" {
 ############################################
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.project_prefix}-rt-public" }
+
+  tags = {
+    Name = "${var.project_prefix}-rt-public"
+  }
 }
 
 resource "aws_route" "public_default_igw" {
@@ -123,6 +191,7 @@ resource "aws_route_table_association" "assoc_public_a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
 }
+
 resource "aws_route_table_association" "assoc_public_b" {
   subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public.id
@@ -131,16 +200,25 @@ resource "aws_route_table_association" "assoc_public_b" {
 # Private RTs (default empty; later we’ll add GWLB routes)
 resource "aws_route_table" "private_a" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.project_prefix}-rt-private-a" }
+
+  tags = {
+    Name = "${var.project_prefix}-rt-private-a"
+  }
 }
+
 resource "aws_route_table" "private_b" {
   vpc_id = aws_vpc.this.id
-  tags   = { Name = "${var.project_prefix}-rt-private-b" }
+
+  tags = {
+    Name = "${var.project_prefix}-rt-private-b"
+  }
 }
+
 resource "aws_route_table_association" "assoc_private_a" {
   subnet_id      = aws_subnet.private_a.id
   route_table_id = aws_route_table.private_a.id
 }
+
 resource "aws_route_table_association" "assoc_private_b" {
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_b.id
@@ -152,8 +230,12 @@ resource "aws_route_table_association" "assoc_private_b" {
 resource "aws_default_security_group" "default" {
   vpc_id                 = aws_vpc.this.id
   revoke_rules_on_delete = true
-  # No ingress/egress rules (implicit deny)
-  tags = { Name = "${var.project_prefix}-default-sg-locked" }
+
+  # (no ingress/egress rules defined here → implicit deny)
+
+  tags = {
+    Name = "${var.project_prefix}-default-sg-locked"
+  }
 }
 
 ############################################
@@ -167,9 +249,16 @@ resource "aws_security_group" "sg_bastion" {
   description = "SSM bastion — no inbound; egress only"
   vpc_id      = aws_vpc.this.id
 
-  egress { from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"] }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-  tags = { Name = "${var.project_prefix}-sg-bastion" }
+  tags = {
+    Name = "${var.project_prefix}-sg-bastion"
+  }
 }
 
 resource "aws_security_group" "sg_mgmt" {
@@ -179,26 +268,33 @@ resource "aws_security_group" "sg_mgmt" {
 
   # HTTPS from bastion SG
   ingress {
-    description              = "Palo UI from bastion"
-    protocol                 = "tcp"
-    from_port                = 443
-    to_port                  = 443
-    security_groups          = [aws_security_group.sg_bastion.id]
+    description     = "Palo UI from bastion"
+    protocol        = "tcp"
+    from_port       = 443
+    to_port         = 443
+    security_groups = [aws_security_group.sg_bastion.id]
   }
 
   # SSH from bastion SG (fallback)
   ingress {
-    description              = "SSH from bastion"
-    protocol                 = "tcp"
-    from_port                = 22
-    to_port                  = 22
-    security_groups          = [aws_security_group.sg_bastion.id]
+    description     = "SSH from bastion"
+    protocol        = "tcp"
+    from_port       = 22
+    to_port         = 22
+    security_groups = [aws_security_group.sg_bastion.id]
   }
 
   # Egress all for updates
-  egress { from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"] }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-  tags = { Name = "${var.project_prefix}-sg-mgmt" }
+  tags = {
+    Name = "${var.project_prefix}-sg-mgmt"
+  }
 }
 
 resource "aws_security_group" "sg_endpoints" {
@@ -213,9 +309,17 @@ resource "aws_security_group" "sg_endpoints" {
     to_port     = 443
     cidr_blocks = [aws_vpc.this.cidr_block]
   }
-  egress { from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"] }
 
-  tags = { Name = "${var.project_prefix}-sg-endpoints" }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_prefix}-sg-endpoints"
+  }
 }
 
 ############################################
@@ -225,25 +329,31 @@ resource "aws_security_group" "sg_endpoints" {
 #  - com.amazonaws.region.ec2messages
 ############################################
 locals {
-  endpoint_subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-  endpoint_services   = ["ssm", "ssmmessages", "ec2messages"]
+  endpoint_subnet_ids = [
+    aws_subnet.private_a.id,
+    aws_subnet.private_b.id
+  ]
+
+  endpoint_services = [
+    "ssm",
+    "ssmmessages",
+    "ec2messages"
+  ]
 }
 
-# Create endpoints in a loop
 resource "aws_vpc_endpoint" "ssm_endpoints" {
   for_each            = toset(local.endpoint_services)
   vpc_id              = aws_vpc.this.id
-  service_name        = "com.amazonaws.${var.region == null ? "us-west-1" : var.region}.${each.key}"
+  service_name        = "com.amazonaws.${var.region}.${each.key}"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = local.endpoint_subnet_ids
   private_dns_enabled = true
   security_group_ids  = [aws_security_group.sg_endpoints.id]
 
-  tags = { Name = "${var.project_prefix}-vpce-${each.key}" }
+  tags = {
+    Name = "${var.project_prefix}-vpce-${each.key}"
+  }
 }
-
-# To avoid hardcoding region in service_name, define:
-variable "region" { type = string, default = "us-west-1" }
 
 ############################################
 # SSM Bastion (private, no public IP)
@@ -252,12 +362,17 @@ variable "region" { type = string, default = "us-west-1" }
 data "aws_ami" "al2" {
   most_recent = true
   owners      = ["amazon"]
-  filter { name = "name", values = ["amzn2-ami-hvm-*-x86_64-gp2"] }
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
 }
 
 # IAM role for SSM
 resource "aws_iam_role" "bastion_role" {
   name = "${var.project_prefix}-bastion-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -266,7 +381,10 @@ resource "aws_iam_role" "bastion_role" {
       Action   = "sts:AssumeRole"
     }]
   })
-  tags = { Name = "${var.project_prefix}-bastion-role" }
+
+  tags = {
+    Name = "${var.project_prefix}-bastion-role"
+  }
 }
 
 # Attach AmazonSSMManagedInstanceCore
@@ -282,18 +400,20 @@ resource "aws_iam_instance_profile" "bastion_profile" {
 
 # Bastion instance (no public IP)
 resource "aws_instance" "bastion" {
-  ami                    = data.aws_ami.al2.id
-  instance_type          = var.bastion_instance_type
-  subnet_id              = aws_subnet.private_a.id
+  ami                         = data.aws_ami.al2.id
+  instance_type               = var.bastion_instance_type
+  subnet_id                   = aws_subnet.private_a.id
   associate_public_ip_address = false
-  iam_instance_profile   = aws_iam_instance_profile.bastion_profile.name
-  vpc_security_group_ids = [aws_security_group.sg_bastion.id]
+  iam_instance_profile        = aws_iam_instance_profile.bastion_profile.name
+  vpc_security_group_ids      = [aws_security_group.sg_bastion.id]
 
   metadata_options {
     http_tokens = "required"
   }
 
-  tags = { Name = "${var.project_prefix}-ssm-bastion" }
+  tags = {
+    Name = "${var.project_prefix}-ssm-bastion"
+  }
 }
 
 ############################################
@@ -306,6 +426,7 @@ resource "aws_cloudwatch_log_group" "vpc_flow" {
 
 resource "aws_iam_role" "vpc_flow" {
   name = "${var.project_prefix}-vpc-flow-role"
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -319,11 +440,17 @@ resource "aws_iam_role" "vpc_flow" {
 resource "aws_iam_role_policy" "vpc_flow" {
   name = "${var.project_prefix}-vpc-flow-policy"
   role = aws_iam_role.vpc_flow.id
+
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
       Effect   = "Allow",
-      Action   = ["logs:CreateLogStream","logs:PutLogEvents","logs:DescribeLogGroups","logs:DescribeLogStreams"],
+      Action   = [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ],
       Resource = "${aws_cloudwatch_log_group.vpc_flow.arn}:*"
     }]
   })
@@ -340,7 +467,9 @@ resource "aws_flow_log" "vpc" {
 ############################################
 # Outputs
 ############################################
-output "vpc_id" { value = aws_vpc.this.id }
+output "vpc_id" {
+  value = aws_vpc.this.id
+}
 
 output "subnet_ids" {
   value = {
@@ -367,7 +496,9 @@ output "security_groups" {
   }
 }
 
-output "bastion_instance_id" { value = aws_instance.bastion.id }
+output "bastion_instance_id" {
+  value = aws_instance.bastion.id
+}
 
 output "vpce_ids" {
   value = {
