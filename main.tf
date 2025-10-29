@@ -417,7 +417,7 @@ resource "aws_instance" "bastion" {
 }
 
 ############################################
-# VPC Flow Logs → CloudWatch
+# VPC Flow Logs → CloudWatch  (fixed: use log_destination)
 ############################################
 resource "aws_cloudwatch_log_group" "vpc_flow" {
   name              = "/vpc/${var.project_prefix}/flow-logs"
@@ -457,11 +457,16 @@ resource "aws_iam_role_policy" "vpc_flow" {
 }
 
 resource "aws_flow_log" "vpc" {
+  vpc_id       = aws_vpc.this.id
+  iam_role_arn = aws_iam_role.vpc_flow.arn
+  traffic_type = "ALL"
+
   log_destination_type = "cloud-watch-logs"
-  log_group_name       = aws_cloudwatch_log_group.vpc_flow.name
-  iam_role_arn         = aws_iam_role.vpc_flow.arn
-  traffic_type         = "ALL"
-  vpc_id               = aws_vpc.this.id
+  log_destination      = aws_cloudwatch_log_group.vpc_flow.arn
+
+  tags = {
+    Name = "${var.project_prefix}-flow-logs"
+  }
 }
 
 ############################################
